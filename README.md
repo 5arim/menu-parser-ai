@@ -1,27 +1,24 @@
 
-
----
-
 # Menu Parser (OCR + Structured Output)
 
-An AI-assisted pipeline to extract text from **scanned restaurant menus (images or PDFs)** and structure it into clean sections with `(item, price, notes)` pairs.
+An **AI-assisted pipeline** to extract text from **scanned restaurant menus (images or PDFs)** and structure it into clean sections with `(item, price, notes)` pairs.
 
 ---
 
 ## ✨ Features
 
 * **OCR Support**
-  Works with images (`.jpg`, `.png`, `.webp`) and PDFs (text-based or scanned).
+  Works with **images** (`.jpg`, `.png`, `.webp`) and **PDFs** (text-based or scanned).
 * **Text Cleaning**
-  Preprocessing steps (grayscale, contrast, denoise, sharpen) improve OCR accuracy.
+  Grayscale, denoise, contrast boost, and sharpening improve OCR accuracy.
 * **Menu Parsing**
-  Detects categories/sections (e.g., *Drinks*, *Starters*, *Desserts*) and captures `item + price` pairs.
-* **Output Formats**
-  Save results to **JSON** or **CSV** for downstream use.
+  Automatically detects **sections** (e.g., *Starters*, *Drinks*, *Desserts*) and extracts `item + price` pairs.
+* **Flexible Outputs**
+  Save structured data into **JSON** or **CSV**.
 * **Optional LLM Integration**
-  Designed to work with a local or external LLM (e.g., Mistral-4Q in GGUF format) for **better structured parsing**.
+  Designed to optionally connect with a **local model** (e.g., *Mistral-4Q GGUF*) or **cloud LLMs** (Gemini, OpenAI, Claude) for more **accurate structuring**.
 
-  > ⚠️ Currently, the LLM model is disabled in this repo because of heavy size. You can plug it back in when needed.
+  > ⚠️ LLM integration is currently disabled by default (due to large size). You can enable it later.
 
 ---
 
@@ -29,10 +26,10 @@ An AI-assisted pipeline to extract text from **scanned restaurant menus (images 
 
 ### 1. Install system dependencies
 
-* **Tesseract OCR** ([Windows builds: UB Mannheim](https://github.com/UB-Mannheim/tesseract/wiki))
-* **(PDF only)** [Poppler](https://blog.alivate.com.au/poppler-windows/) for `pdf2image`
+* **Tesseract OCR** → [Download (UB Mannheim build)](https://github.com/UB-Mannheim/tesseract/wiki)
+* **Poppler (for PDFs)** → [Windows download](https://blog.alivate.com.au/poppler-windows/)
 
-  > Add Poppler’s `bin/` folder to your PATH
+👉 Add Poppler’s `bin/` folder to your **PATH**.
 
 ---
 
@@ -46,13 +43,13 @@ pip install -r requirements.txt
 
 ### 3. Configure Tesseract (Windows only)
 
-Add Tesseract to your PATH or set `TESSERACT_CMD` manually:
+Either add it to **PATH** or manually set `TESSERACT_CMD`:
 
 ```powershell
-setx TESSERACT_CMD "C:\Users\HP\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
+setx TESSERACT_CMD "C:\Program Files\Tesseract-OCR\tesseract.exe"
 ```
 
-Alternatively, edit `menu_parser.py` to set:
+Or in `menu_parser.py`:
 
 ```python
 pytesseract.pytesseract.tesseract_cmd = r"C:\...\tesseract.exe"
@@ -68,76 +65,90 @@ python menu_parser.py path\to\menu.jpg --out result.json --csv result.csv --prin
 
 ---
 
-## ⚙️ How it works
+## ⚙️ How It Works
 
 1. **PDF Handling**
 
-   * Extract text via PyMuPDF.
-   * If empty/low text → convert each page to image (`pdf2image`) → OCR.
+   * Extract text with PyMuPDF.
+   * If empty → rasterize pages with `pdf2image` → OCR.
 
 2. **Image Handling**
 
-   * Pillow preprocessing → OCR with Tesseract.
+   * Preprocessing with Pillow → OCR via Tesseract.
 
 3. **Parsing**
 
-   * Detect section headers (ALL CAPS, keywords, colons).
-   * Regex for item + price extraction.
-   * Group results into `{section: [{item, price, notes}]}`
+   * Regex + heuristics detect **section headers** and `item + price` lines.
+   * Outputs structured dictionary:
+
+     ```json
+     {
+       "Starters": [
+         {"item": "Spring Rolls", "price": "$5.99", "notes": ""}
+       ]
+     }
+     ```
 
 4. **Outputs**
 
-   * JSON for programmatic use
-   * CSV for spreadsheets
+   * JSON → programmatic use
+   * CSV → spreadsheets
 
 ---
 
 ## 🎯 Tips for Better Accuracy
 
-* Multi-language menus → `--lang eng+urd`
-* PDFs → increase DPI (`dpi=300`) for sharper text.
-* Expand `parse_rules.py` with **section keywords** and **price regexes** tuned for your locale.
-* For highly styled or multi-column menus → try `layoutparser` or deep-learning models like `Donut` / `LayoutLM`.
+* For multi-language menus:
+
+  ```bash
+  python menu_parser.py menu.jpg --lang eng+urd
+  ```
+* For PDFs → increase DPI (`dpi=300`) in `pdf_to_text`.
+* Customize regex & keywords in `parse_rules.py`.
+* For **multi-column menus**, try `layoutparser` or transformer-based parsers.
 
 ---
 
-## 🌐 Streamlit UI (optional)
-
-You can run a quick web UI for testing:
+## 🌐 Optional Streamlit UI
 
 ```bash
 streamlit run streamlit_app.py
 ```
 
-![streamlit demo](https://via.placeholder.com/600x250?text=Streamlit+Menu+Parser+Demo)
+Upload a menu file → see structured JSON instantly.
 
 ---
 
-## 🤖 LLM Integration (optional)
+## 🤖 LLM Integration (Optional)
 
-* **Local Model**: Mistral-4Q (GGUF format)
+* **Local Models**
+  *Mistral-4Q* (GGUF format, via `llama.cpp` or `ctransformers`).
 
-  * You can run via [llama.cpp](https://github.com/ggerganov/llama.cpp) or `ctransformers` in Python.
-  * Used for **intelligent structuring** of OCR text.
-* **Cloud Models**: Can integrate with **Gemini**, **OpenAI GPT**, or **Anthropic Claude** if desired.
+* **Cloud Models**
+  Works with **Gemini**, **OpenAI GPT**, or **Claude** for smarter structuring.
 
-> For lightweight experiments, LLM is optional — heuristic parsing already works.
-> For production accuracy, LLM gives **cleaner categories, better grouping, and typo handling**.
+LLMs can:
+✔ Fix OCR typos
+✔ Merge split lines
+✔ Improve category grouping
+
+> Default repo runs **without LLMs** to stay lightweight.
+> You can plug in LLM support later if needed.
 
 ---
 
 ## 📌 Roadmap
 
-* [ ] Improve parsing for multi-column menus
-* [ ] Enhance multilingual OCR support
-* [ ] Plug-and-play LLM integration (choose local or cloud)
-* [ ] Web-based drag-and-drop upload + API
+* [ ] Smarter multi-column parsing
+* [ ] Better multilingual OCR
+* [ ] Plug-and-play LLM adapters
+* [ ] Drag-and-drop **web upload** + REST API
 
 ---
 
 ## 🤝 Contributing
 
-PRs are welcome! Ideas, bug reports, or regex improvements are highly appreciated.
+PRs, regex improvements, and new parsing rules are welcome!
 
 ---
 
@@ -146,5 +157,3 @@ PRs are welcome! Ideas, bug reports, or regex improvements are highly appreciate
 MIT
 
 ---
-
-
